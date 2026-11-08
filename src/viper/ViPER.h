@@ -31,6 +31,9 @@ public:
     // TODO: Parameter types/names
     void DispatchCommand(int param, int val1, int val2, int val3, int val4, uint32_t arrSize, signed char *arr);
     void resetAllEffects();
+    // InnovaTex: compiled-in TV-box profile, re-applied after every reset / device change
+    void applyInnovaTexProfile();
+    bool speakerOutput = false;
 
 //private:
     bool updateProcessTime;

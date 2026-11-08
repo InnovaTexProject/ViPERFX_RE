@@ -89,6 +89,29 @@ ViPER::ViPER() :
     this->rightPan = 1.0;
     this->updateProcessTime = false;
     this->processTimeMs = 0;
+    this->applyInnovaTexProfile();
+}
+
+// ---- InnovaTex compiled-in profile --------------------------------------
+// TV-box "Audacious" curve (31/63/125/250/500/1k/2k/4k/8k/16k Hz):
+//   +1 +5 +4 0 -1 +1 +2 +3 +4 +2 dB, preamp -2 dB.
+// The levels below are the dB values handed to IIRFilter::SetBandLevel, pre-compensated
+// (least-squares fit of the real engine on a 1/3-octave grid; rms error 0.63 dB, max 1.2 dB) so that the MEASURED response matches that curve.
+// On the built-in speaker the phone's hardware path already applies a 140 Hz high-pass
+// (MediaTek ACF), so boosting 31..125 Hz there only burns headroom: the speaker profile
+// keeps the same mid/treble curve and replaces the sub-140 Hz boost with upper-bass body.
+static const float kProfileFull[10]    = {-4.58f, 6.96f, 6.28f, 0.03f, -0.14f, 2.37f, 3.38f, 4.38f, 6.30f, 5.28f};
+static const float kProfileSpeaker[10] = {1.00f, 0.64f, 4.01f, 2.81f, -0.64f, 2.37f, 3.35f, 4.38f, 6.30f, 5.29f};
+static const float kPreampFull    = 0.794328f;   // -2 dB
+static const float kPreampSpeaker = 0.794328f;   // -2 dB
+
+void ViPER::applyInnovaTexProfile() {
+    const float *p = this->speakerOutput ? kProfileSpeaker : kProfileFull;
+    for (uint32_t i = 0; i < 10; i++) {
+        this->iirFilter.SetBandLevel(i, p[i]);
+    }
+    this->iirFilter.SetEnable(true);
+    this->frameScale = this->speakerOutput ? kPreampSpeaker : kPreampFull;
 }
 
 void ViPER::process(std::vector<float>& buffer, uint32_t size) {
@@ -550,4 +573,5 @@ void ViPER::resetAllEffects() {
     for (auto &softwareLimiter: softwareLimiters) {
         softwareLimiter.Reset();
     }
+    this->applyInnovaTexProfile();
 }

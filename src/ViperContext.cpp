@@ -363,6 +363,19 @@ int32_t ViperContext::handleCommand(uint32_t cmdCode, uint32_t cmdSize, void *pC
             *(effect_config_t *) pReplyData = config;
             return 0;
         }
+        case EFFECT_CMD_SET_DEVICE: {
+            // audio_devices_t of the output this effect instance is attached to.
+            if (cmdSize == sizeof(uint32_t) && pCmdData != nullptr) {
+                uint32_t device = *(uint32_t *) pCmdData;
+                // AUDIO_DEVICE_OUT_EARPIECE 0x1, _SPEAKER 0x2, _SPEAKER_SAFE 0x400000
+                bool speaker = (device & (0x1u | 0x2u | 0x400000u)) != 0;
+                if (speaker != viper.speakerOutput) {
+                    viper.speakerOutput = speaker;
+                    viper.applyInnovaTexProfile();
+                }
+            }
+            return 0;
+        }
         default: {
             VIPER_LOGE("handleCommand called with unknown command: %d", cmdCode);
             return -EINVAL;
